@@ -136,6 +136,36 @@ before 6 because 7 is what a second host is blocked on and 6 is the largest.
 - **`models.py` probes mlx, llama and ollama on a background thread at boot.** Pointless on a
   phone-facing server. Opt-in, as the plan already says.
 
+## What Phase 1 found
+
+The block is in `valmiki/agent/`, over a `LocalPort` that holds one Ramabana `Agent` and no
+kernels. All 82 routes register, the pane renders at `/agent` in valmiki's own theme with no
+console error, and the client runs as the module graph Leela's step 6 made it. Three measurements
+came out differently from the plan.
+
+**The port is nine members, not six.** Leela's plan counted what `app.py` read off `Workspace` and
+got thirty-four. It did not count what the block reads off `Ctx`, which is `ai`, `inline_ai`,
+`memory`, `fs` and `docs`. The first two are `assistants`; the other three are `memory`, `files`
+and `docs`, nullable the way `execution` is, with a null object each. A host without a vault
+answers an empty list rather than raising.
+
+**`threads.py` does not move unchanged.** The plan says it and `turns.py` read one workspace member
+between them. `threads.py` reads thirty-three: `approvals_mode`, `model`, `local_multimodal`,
+`_compacted`, `sync_agent_routing`, `_ai`, `_turn_runner`, `fresh_history`, `guard_history`,
+`save_timeline`, `ask_stream` and more, and it constructs Leela's `Assistant` -- the one file the
+plan is clearest about never moving. `Thread` takes an `ai` argument, so a host that always passes
+one skips that construction, but the rest is a facade a port has to supply or a rewrite onto the
+port. It is the largest piece of Phase 1 and it is not done: the routes that reach a thread answer
+500 here.
+
+**The pane borrows forty-four classes it does not own.** `.lee-btn`, `.lee-input`, `.lee-select`,
+`.lee-modal`, `.lee-panel` and the diff rows are Leela's whole IDE, styled once for the terminal
+and git as much as for the pane. The step 2 split left them behind, correctly, and the pane is
+bare without them: the first render in valmiki drew every control as an Oat default. They are
+`atoms.css`, taken from the same sheet and rewritten onto `--val-*`, and the sheet order is the
+bridge, then the atoms, then the pane's own rules. When the two disagree about one of them,
+Leela's is the copy that moves, because this one is the copy.
+
 ## Order
 
 1. ~~valmiki: empty `__init__.py`, rename, strip to core and auth.~~ Done.

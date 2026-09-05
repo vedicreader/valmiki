@@ -5,7 +5,7 @@ from starlette.middleware import Middleware
 from starlette.middleware.gzip import GZipMiddleware
 from starlette.routing import Mount
 from .core import *
-from valmiki import auth as a
+from valmiki import agent as ag, auth as a
 
 __all__ = ['launch', 'app']
 
@@ -55,6 +55,24 @@ for _d in ('vendor', 'assets'):
         app.router.routes.insert(0, Mount(f'/static/{_d}', app=StaticImmutable(directory=f'static/{_d}'),
                                           name=f'static_{_d}'))
 
+#: one agent over the folder valmiki was started in, gated so every write is asked about
+_port = None
+def port():
+    global _port
+    if _port is None:
+        from valmiki.agent.ports.local import local_port
+        _port = local_port(roots=[os.environ.get('AGENT_ROOT', '.')],
+                           model=os.environ.get('MODEL') or None,
+                           approve=os.environ.get('AGENT_APPROVE', 'ask'),
+                           cfg_dir=cfg.data_root/'agent', index=False)
+    return _port
+
+def agent_page(req, auth):
+    "The pane, whole-page. It is the right-hand column of an IDE elsewhere; here it is the app."
+    return (Title(f'{cfg.app_nm} agent'), *ag.headers(),
+            Div(sprites(), navbar(usr=auth, title=cfg.app_sh, style=NavBarT.glass),
+                Div(ag.panel(port()), cls='val-agent-page', id='main-content')))
+
 def _intro():
     lgn = Button('Sign in', hx_get=f'{a.Routes.auth_modal}?step={a.Step.login}', hx_target='body', hx_swap='beforeend',
                  cls=[ButtonT.primary, TextT.sm])
@@ -75,6 +93,8 @@ def _home(auth):
 def index(req, auth): return base(_home(auth), auth, title=cfg.app_nm) if auth else landing(_intro())
 
 app.get('/')(index)
+app.get('/agent')(agent_page)
+ag.connect(app, port())     # the pane's routes run tools here, so auth never skips them
 app.get('/health')(lambda req: JSONResponse({'status': 'ok'}))
 a.connect(app)   # auth connects last: it reads the complete RouteOverrides skip list
 

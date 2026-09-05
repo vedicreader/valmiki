@@ -1,0 +1,672 @@
+/* The agent pane's rules.
+
+   Every colour here is a `--val-*` token and none of them is declared in this file. The
+   host declares them, in one bridge file loaded ahead of this one: `tokens.lee.css` maps
+   them onto Leela's `--lee-*`, so the pane follows whichever of Leela's five theme
+   families and two modes is running. A second host writes a second bridge and nothing
+   here changes. See docs/ui-blocks.md. */
+.lee-agent-status { display: inline-flex; align-items: center; gap: 4px; color: var(--val-green); font: 10px/1 var(--val-mono); text-transform: lowercase; }
+.lee-agent-status-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; box-shadow: 0 0 0 2px color-mix(in srgb, currentColor 16%, transparent); }
+.lee-agent-status.working { color: var(--val-blue); }
+.lee-agent-status.working .lee-agent-status-dot { animation: lee-agent-pulse 1.1s ease-in-out infinite; }
+.lee-agent-head { min-height: 39px; padding: 5px 9px; background: var(--val-bg); }
+.lee-agent-heading { display: grid; gap: 2px; min-width: 0; }
+.lee-agent-state-badge { color: var(--val-fg4); font: 8.5px/1.15 var(--val-mono); letter-spacing: .02em; }
+.lee-agent-head-actions { display: flex; align-items: center; gap: 2px; min-width: 0; }
+/* One turn, foldable. The body is clipped rather than `display: none`: it holds CodeMirror views
+   that measure their width from the DOM, `LeeCM` exports no re-measure, and `boot.js` only
+   re-measures `lee.editors` -- a step's view is not in there. Clipped, its width stays right. */
+.lee-agent-turn { margin: 0 0 10px; border-bottom: 1px solid var(--val-border); }
+.lee-agent-turn-head { display: flex; align-items: center; gap: 6px; min-height: 24px; padding: 3px 2px; }
+.lee-agent-turn-fold {
+  display: grid; place-items: center; width: 18px; height: 18px; padding: 0; border: 0; border-radius: 4px;
+  background: none; color: var(--val-fg4); cursor: pointer;
+}
+.lee-agent-turn-fold:hover { background: var(--val-active-line); color: var(--val-fg); }
+.lee-agent-turn-title {
+  flex: 1; min-width: 0; overflow: hidden; color: var(--val-fg3); white-space: nowrap;
+  text-overflow: ellipsis; font: 10px/1.4 var(--val-mono);
+}
+.lee-agent-turn.folded .lee-agent-turn-title { color: var(--val-fg2); }
+.lee-agent-turn-meta { flex: none; color: var(--val-fg4); font: 9px/1.3 var(--val-mono); text-transform: uppercase; }
+/* `display: none`, not only `max-height: 0`: a folded body with height zero is still laid out, and a
+   conversation of forty folded turns cost a hundred milliseconds of layout every time the pane
+   resized. It is already `visibility: hidden` and `aria-hidden`, so nothing else changes. */
+.lee-agent-turn.folded > .lee-agent-turn-body { display: none; max-height: 0; overflow: hidden; visibility: hidden; }
+.lee-agent-turn.lee-turn-undone-card > .lee-agent-turn-head { opacity: .6; }
+.lee-history-index {
+  position: sticky; top: 0; z-index: 2; display: grid;
+  grid-template-columns: minmax(120px, auto) minmax(220px, 1fr) auto auto; align-items: center; gap: 10px;
+  padding: 7px 8px; border-bottom: 1px solid var(--val-border); background: var(--val-bg1);
+}
+.lee-history-heading { display: flex; flex-direction: column; min-width: 0; }
+.lee-history-heading strong { color: var(--val-fg); font: 600 10.5px/1.35 var(--val-mono); }
+.lee-history-heading span { overflow: hidden; color: var(--val-fg4); font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.lee-history-select { width: 100%; min-width: 0; font-family: var(--val-mono); }
+.lee-history-runs { color: var(--val-fg4); font: 9.5px/1 var(--val-mono); white-space: nowrap; }
+.lee-history-resume { white-space: nowrap; }
+/* `lee-help` is the keyboard panel, further down and a grid. Two things cannot share a class: the
+   panel's rule won, and every one of these badges rendered as a padded two-column box. */
+.lee-hint { display: inline-flex; align-items: center; justify-content: center; width: 13px; height: 13px; margin-left: 4px; border: 1px solid var(--val-fg4); border-radius: 50%; color: var(--val-fg4); font-size: 9px; line-height: 1; cursor: help; }
+.lee-hint:hover, .lee-hint:focus { border-color: var(--val-accent); color: var(--val-accent); outline: none; }
+.lee-history-filter { display: flex; align-items: center; gap: 5px; color: var(--val-fg4); font-size: 10px; white-space: nowrap; }
+.lee-history-filter input { margin: 0; }
+.lee-history-session-head { display: flex; align-items: baseline; gap: 8px; padding: 8px 4px 4px; }
+.lee-history-session-head strong { color: var(--val-fg); font-size: 11px; }
+.lee-history-session-head span { color: var(--val-green); font-size: 9.5px; }
+.lee-completions { padding: 8px 4px 12px; }
+.lee-completion-models, .lee-completion-log { display: flex; flex-direction: column; gap: 1px; max-height: 180px; overflow: auto; }
+.lee-completion-log { max-height: 46vh; }
+.lee-completion-models > div, .lee-completion-log > div {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, .5fr); gap: 10px;
+  align-items: center; padding: 4px 6px; border-radius: 3px; color: var(--val-fg3); font: 9.5px/1.4 var(--val-mono);
+}
+.lee-completion-models > div:hover, .lee-completion-log > div:hover { background: var(--val-sel); color: var(--val-fg); }
+.lee-completion-models strong, .lee-completion-log strong,
+.lee-completion-models span, .lee-completion-log span,
+.lee-completion-models em, .lee-completion-log em { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lee-completion-models span, .lee-completion-log span { color: var(--val-fg4); }
+.lee-completion-models em, .lee-completion-log em { font-style: normal; text-align: right; }
+
+/* A row opens onto the question and the code either side of it. `summary` keeps the grid the flat
+   rows had, so an expandable row and a per-model row still line up in the same three columns. */
+.lee-completion-row > summary { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: baseline;
+  padding: 3px 6px; cursor: pointer; list-style: none; }
+.lee-completion-row > summary::-webkit-details-marker { display: none; }
+.lee-completion-row > summary:hover { background: var(--val-sel); color: var(--val-fg); }
+.lee-completion-row[data-completion="replace"] em { color: var(--val-green); }
+.lee-completion-row[data-completion="discard"] em { color: var(--val-red); }
+.lee-completion-detail { display: flex; flex-direction: column; gap: 6px; padding: 4px 8px 10px; }
+.lee-completion-code h5 { margin: 0 0 2px; font: 9px/1.3 var(--val-mono); text-transform: uppercase; color: var(--val-fg4); }
+.lee-completion-code pre { margin: 0; padding: 6px 8px; max-height: 220px; overflow: auto; white-space: pre-wrap;
+  overflow-wrap: anywhere; background: var(--val-bg1); border: 1px solid var(--val-border); border-radius: 4px; }
+.lee-session-path { padding: 5px 4px; color: var(--val-fg4); font: 9.5px/1.4 var(--val-mono); }
+.lee-session-markdown { padding: 7px 5px; color: var(--val-fg2); border-bottom: 1px solid var(--val-border); }
+.lee-session-code { border-bottom: 1px solid color-mix(in srgb, var(--val-border) 70%, transparent); }
+.lee-session-code > summary {
+  display: grid; grid-template-columns: 48px minmax(0,1fr) 12px; align-items: center; gap: 7px;
+  min-height: 28px; padding: 2px 5px; cursor: pointer; list-style: none; color: var(--val-fg4);
+}
+.lee-session-code > summary::-webkit-details-marker { display: none; }
+.lee-session-code > summary:hover { background: var(--val-active-line); }
+.lee-session-code > summary span:first-child { font-size: 9.5px; }
+.lee-session-code > summary code { overflow: hidden; color: var(--val-fg2); text-overflow: ellipsis; white-space: nowrap; }
+.lee-session-code-body { margin: 0 4px 8px 54px; }
+.lee-user-message {
+  margin: 4px 2px 10px; overflow: hidden; border: 1px solid var(--val-border);
+  border-left: 2px solid var(--val-accent); border-radius: 5px;
+  background: color-mix(in srgb, var(--val-accent) 4%, var(--val-bg1));
+  box-shadow: inset 0 1px color-mix(in srgb, var(--val-fg) 3%, transparent);
+}
+.lee-user-message > header {
+  display: flex; align-items: baseline; gap: 7px; min-height: 26px; padding: 4px 9px;
+  border-bottom: 1px solid color-mix(in srgb, var(--val-border) 72%, transparent);
+}
+.lee-user-message > header strong { color: var(--val-fg); font: 600 10.5px/1.3 var(--val-mono); }
+.lee-agent-attention button[data-reshape-apply] { color: var(--val-green); }
+.lee-agent-attention button[data-reshape-cancel] { color: var(--val-fg4); }
+.lee-thread-toggle { display: inline-flex; align-items: center; gap: 5px; }
+.lee-thread-toggle.unread { color: var(--val-accent); }
+.lee-thread-toggle.wants { color: var(--val-red); }
+.lee-thread-count { padding: 0 4px; border-radius: 6px; background: var(--val-bg2);
+                    color: var(--val-fg4); font: 9px/1.5 var(--val-mono); }
+.lee-thread-toggle.wants .lee-thread-count { background: color-mix(in srgb, var(--val-red) 22%, transparent); color: var(--val-fg); }
+.lee-thread-list { display: flex; flex-direction: column; gap: 4px; margin: 0 10px 6px; padding: 6px;
+                   border: 1px solid var(--val-border); border-radius: 7px; background: var(--val-bg1); }
+.lee-thread-list[hidden] { display: none; }
+.lee-thread-card { padding: 6px 8px; border: 1px solid transparent; border-radius: 6px;
+                   background: var(--val-bg2); cursor: pointer; }
+.lee-thread-card:hover, .lee-thread-card:focus-visible { border-color: var(--val-border); outline: none; }
+.lee-thread-card.active { border-color: var(--val-accent); background: color-mix(in srgb, var(--val-accent) 8%, var(--val-bg2)); }
+.lee-thread-card.wants { border-color: var(--val-red); }
+.lee-thread-card header { display: flex; align-items: baseline; gap: 6px; }
+.lee-thread-card header strong { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis;
+                                 white-space: nowrap; color: var(--val-fg); font: 600 11px/1.4 var(--val-mono); }
+.lee-thread-state { color: var(--val-fg4); font: 9px/1.4 var(--val-mono); }
+.lee-thread-state.working { color: var(--val-accent); }.lee-thread-state.waiting { color: var(--val-red); }
+.lee-thread-card footer { display: flex; align-items: center; gap: 6px; margin-top: 3px;
+                          color: var(--val-fg4); font: 9px/1.4 var(--val-mono); }
+.lee-thread-card footer button { border: 0; background: none; color: var(--val-fg4); cursor: pointer;
+                                 font: 9px/1.4 var(--val-mono); text-decoration: underline; }
+.lee-thread-card footer button:hover { color: var(--val-fg); }
+.lee-thread-card footer button.warn:hover { color: var(--val-red); }
+.lee-thread-list-foot { display: flex; align-items: center; padding: 4px 2px 0; border-top: 1px solid var(--val-border); }
+.lee-thread-list-foot label { display: inline-flex; align-items: center; gap: 5px; color: var(--val-fg4);
+                              font: 9px/1.4 var(--val-mono); cursor: pointer; }
+.lee-agent-attention { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 10px 6px;
+                       padding: 6px 9px; border-radius: 6px; border: 1px solid var(--val-border);
+                       background: color-mix(in srgb, var(--val-accent) 9%, transparent);
+                       color: var(--val-fg2); font: 10px/1.4 var(--val-mono); }
+.lee-agent-attention[hidden] { display: none; }
+.lee-agent-attention button { border: 0; background: none; color: var(--val-accent); cursor: pointer;
+                              font: 600 10px/1.4 var(--val-mono); text-decoration: underline; }
+.lee-agent-notify { display: inline-flex; align-items: center; gap: 4px; color: var(--val-fg4);
+                    font: 9.5px/1 var(--val-mono); }
+.lee-user-message.queued { opacity: .58; }
+.lee-user-message.queued > button { margin: 0 10px 8px; border: 0; background: none; color: var(--val-red); cursor: pointer; font: 9px/1 var(--val-mono); text-transform: uppercase; }
+.lee-user-message > header span { color: var(--val-fg4); font-size: 9.5px; }
+.lee-user-message-body {
+  padding: 8px 10px 9px; color: var(--val-fg2); white-space: pre-wrap; overflow-wrap: anywhere;
+  font: 11px/1.55 var(--val-mono);
+}
+.lee-user-message-body.preview {
+  max-height: 9.3em; overflow: hidden;
+  mask-image: linear-gradient(to bottom, #000 72%, transparent 100%);
+}
+.lee-user-message-more { border-top: 1px solid color-mix(in srgb, var(--val-border) 72%, transparent); }
+.lee-user-message-more > summary {
+  display: grid; grid-template-columns: auto 1fr 12px; align-items: center; gap: 8px;
+  min-height: 27px; padding: 3px 9px; list-style: none; cursor: pointer; color: var(--val-fg2);
+  font: 10px/1.35 var(--val-mono);
+}
+.lee-user-message-more > summary::-webkit-details-marker { display: none; }
+.lee-user-message-more > summary:hover { background: var(--val-active-line); }
+.lee-user-message-more > summary span { color: var(--val-fg4); font-size: 9.5px; }
+.lee-user-message-more > pre {
+  max-height: 360px; margin: 0; padding: 9px 10px; overflow: auto; border-top: 1px solid var(--val-border);
+  background: var(--val-bg); color: var(--val-fg2); white-space: pre-wrap; overflow-wrap: anywhere;
+  font: 10.5px/1.5 var(--val-mono);
+}
+.lee-agent-reply { margin-right: 4px; }
+.lee-agent-reply:empty { display: none; }
+/* What has arrived since the last render, before it has been parsed. Same metrics as the prose it
+   follows, so the paragraph does not reflow when the render lands and takes it over. */
+.lee-agent-reply-tail { margin: 0 4px; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--val-fg2); }
+.lee-agent-reply-tail:empty { display: none; }
+.lee-agent-trimmed { color: var(--val-fg4); font: 10px/1.4 var(--val-mono); padding: 4px 2px 8px; }
+.lee-agent-timeline { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
+.lee-agent-timeline > .lee-agent-reply { margin: 0 4px; }
+/* what a delegated question did, which is otherwise thrown away with its conversation */
+.lee-agent-step-open {
+  flex: none; padding: 1px 6px; border: 1px solid var(--val-border); border-radius: 4px;
+  background: none; color: var(--val-fg4); cursor: pointer; font: 9px/1.4 var(--val-mono);
+}
+.lee-agent-step-open:hover { border-color: var(--val-accent); color: var(--val-fg); }
+.lee-subagent-list { display: grid; gap: 10px; max-height: 66vh; overflow: auto; padding: 10px 12px; }
+.lee-subagent {
+  border: 1px solid var(--val-border); border-left: 2px solid var(--val-fg4); border-radius: 5px;
+  background: var(--val-bg1);
+}
+.lee-subagent.ok { border-left-color: var(--val-green); }
+.lee-subagent.failed { border-left-color: var(--val-red); }
+.lee-subagent.running { border-left-color: var(--val-accent); }
+.lee-subagent > header { display: flex; align-items: baseline; gap: 8px; padding: 6px 9px; border-bottom: 1px solid var(--val-border); }
+.lee-subagent > header strong { color: var(--val-fg); font: 600 10.5px/1.3 var(--val-mono); }
+.lee-subagent > header span { color: var(--val-fg4); font-size: 9.5px; }
+.lee-subagent-questions { margin: 6px 9px; padding-left: 18px; color: var(--val-fg2); font-size: 10.5px; line-height: 1.5; }
+.lee-subagent-calls { display: flex; flex-direction: column; gap: 5px; margin: 6px 9px; }
+.lee-subagent-answer > summary { padding: 6px 9px; border-top: 1px solid var(--val-border); color: var(--val-fg3); cursor: pointer; font: 9.5px/1.35 var(--val-mono); }
+.lee-subagent-answer > pre { max-height: 260px; margin: 0; padding: 8px 9px; overflow: auto; color: var(--val-fg2); white-space: pre-wrap; font: 9.5px/1.5 var(--val-mono); }
+.lee-subagent-run { display: flex; align-items: center; gap: 8px; padding: 6px 9px; border-top: 1px solid var(--val-border); }
+.lee-subagent-run:first-of-type { border-top: 0; }
+.lee-subagent-run strong { flex: 1; min-width: 0; overflow: hidden; color: var(--val-fg2); white-space: nowrap; text-overflow: ellipsis; font: 400 10.5px/1.4 var(--val-mono); }
+.lee-subagent-run span { flex: none; color: var(--val-fg4); font-size: 9.5px; }
+.lee-agent-run.child > span { padding-left: 10px; border-left: 1px solid var(--val-border); }
+.lee-agent-children { display: flex; flex-direction: column; gap: 5px; margin: 6px 8px 4px 18px; padding-left: 8px; border-left: 1px solid var(--val-border); }
+.lee-agent-progress {
+  display: grid; grid-template-columns: 30px minmax(0, 1fr) auto auto; align-items: center;
+  gap: 9px; min-height: 38px; margin: 4px 2px 7px; padding: 5px 9px;
+  border: 1px solid color-mix(in srgb, var(--val-accent) 30%, var(--val-border));
+  border-left: 2px solid var(--val-accent); border-radius: 5px;
+  background: color-mix(in srgb, var(--val-accent) 5%, var(--val-bg1));
+  box-shadow: inset 0 1px color-mix(in srgb, var(--val-fg) 4%, transparent);
+  animation: lee-agent-progress-in .24s cubic-bezier(.16,1,.3,1) both;
+}
+.lee-agent-motion { display: flex; align-items: center; justify-content: center; gap: 3px; height: 22px; }
+.lee-agent-motion i {
+  display: block; width: 2px; height: 12px; border-radius: 1px; background: var(--val-accent);
+  transform-origin: 50% 50%; animation: lee-agent-wave 1.05s cubic-bezier(.45,0,.55,1) infinite;
+  will-change: transform, opacity;
+}
+.lee-agent-motion i:nth-child(2) { animation-delay: -0.82s; }
+.lee-agent-motion i:nth-child(3) { animation-delay: -0.64s; }
+.lee-agent-progress-copy { display: flex; align-items: baseline; gap: 7px; min-width: 0; line-height: 1.35; }
+.lee-agent-progress-copy strong { flex: none; color: var(--val-fg); font-size: 11.5px; font-weight: 600; }
+.lee-agent-phase { overflow: hidden; color: var(--val-fg4); font-size: 10.5px; text-overflow: ellipsis; white-space: nowrap; }
+.lee-agent-phase::before { content: '—'; margin-right: 7px; color: var(--val-border); }
+.lee-agent-elapsed { color: var(--val-fg4); font: 10px/1 var(--val-mono); font-variant-numeric: tabular-nums; }
+.lee-agent-stop {
+  padding: 2px 7px; border: 1px solid var(--val-border); border-radius: 3px;
+  background: transparent; color: var(--val-fg4); cursor: pointer; font: 10.5px/1.4 inherit;
+  transition: color .18s cubic-bezier(.16,1,.3,1), border-color .18s cubic-bezier(.16,1,.3,1),
+              transform .18s cubic-bezier(.16,1,.3,1);
+}
+.lee-agent-stop:hover { color: var(--val-red); border-color: color-mix(in srgb, var(--val-red) 55%, var(--val-border)); }
+.lee-agent-stop:active { transform: translateY(1px); }
+.lee-agent-progress.complete { border-left-color: var(--val-green); }
+.lee-agent-progress.failed { border-left-color: var(--val-red); }
+.lee-agent-progress.complete .lee-agent-motion i { background: var(--val-green); animation: none; transform: scaleY(.35); }
+.lee-agent-progress.failed .lee-agent-motion i { background: var(--val-red); animation: none; transform: scaleY(.35); }
+.lee-agent-step-state {
+  position: relative; z-index: 1; width: 8px; height: 8px; justify-self: center;
+  border: 2px solid var(--val-bg1); border-radius: 50%; background: var(--val-fg4);
+  box-shadow: 0 0 0 1px var(--val-border);
+}
+.lee-agent-step-copy { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lee-agent-step-copy { color: var(--val-fg2); }
+.lee-agent-step-copy { grid-column: 2; }
+.lee-agent-step-open { grid-column: 3; }
+.lee-agent-step-meta { grid-column: 4; white-space: nowrap; color: var(--val-fg4); font-size: 9.5px; font-variant-numeric: tabular-nums; }
+.lee-agent-step-detail {
+  margin: 2px 5px 8px 22px; padding: 9px 10px; overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--val-border) 82%, transparent); border-radius: 5px;
+  background: color-mix(in srgb, var(--val-bg) 62%, transparent);
+  animation: lee-agent-detail-in .18s cubic-bezier(.16,1,.3,1) both;
+}
+.lee-agent-step-detail dl {
+  display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 3px 10px;
+  margin: 0 0 7px; padding: 0; font-size: 10px;
+}
+.lee-agent-step-detail dt { color: var(--val-fg4); }
+.lee-agent-step-detail dd { min-width: 0; margin: 0; overflow-wrap: anywhere; color: var(--val-fg2); }
+.lee-tool-result { margin-top: 7px; }
+.lee-tool-result > header { margin-bottom: 3px; color: var(--val-fg4); font-size: 9.5px; }
+.lee-tool-result > pre {
+  max-height: 260px; margin: 0; padding: 8px 9px; overflow: auto; border: 1px solid var(--val-border);
+  border-radius: 4px; background: var(--val-bg); color: var(--val-fg2); white-space: pre-wrap;
+  overflow-wrap: anywhere; font: 10.5px/1.5 var(--val-mono);
+}
+.lee-approval {
+  container-type: inline-size; margin: 10px 2px; overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--val-border) 86%, var(--val-orange));
+  border-left: 3px solid var(--val-orange); border-radius: 6px;
+  background: var(--val-bg1); color: var(--val-fg2);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--val-bg) 42%, transparent),
+              inset 0 1px color-mix(in srgb, var(--val-fg) 4%, transparent);
+  animation: lee-agent-progress-in .22s cubic-bezier(.16,1,.3,1) both;
+}
+.lee-approval.approved { border-left-color: var(--val-green); }
+.lee-approval.refused { border-left-color: var(--val-red); }
+.lee-approval.edited { border-left-color: var(--val-aqua); }
+.lee-approval-head {
+  display: grid; grid-template-columns: 11px minmax(0, 1fr) auto; align-items: center;
+  gap: 9px; min-width: 0; padding: 11px 12px 7px; color: var(--val-orange);
+}
+.lee-checkpoint-title { display: flex; min-width: 0; flex-direction: column; gap: 3px; }
+.lee-approval-head strong {
+  color: var(--val-fg); font: 650 10.5px/1.2 var(--val-mono);
+  letter-spacing: .07em; text-transform: uppercase; white-space: nowrap;
+}
+.lee-approval-head small { color: var(--val-fg4); font: 9px/1.3 var(--val-mono); white-space: nowrap; }
+.lee-approval-head small b {
+  margin-right: 5px; color: var(--val-orange); font-size: 8px; font-weight: 650;
+  letter-spacing: .07em; text-transform: uppercase;
+}
+.lee-proposal-mark { width: 8px; height: 8px; border: 1px solid var(--val-orange); border-radius: 2px; transform: rotate(45deg); }
+.lee-checkpoint-intro { display: grid; gap: 5px; padding: 10px 12px 11px 32px; border-top: 1px solid color-mix(in srgb, var(--val-border) 74%, transparent); background: color-mix(in srgb, var(--val-bg) 38%, var(--val-bg1)); }
+.lee-checkpoint-intro strong { max-width: 62ch; color: var(--val-fg); font: 600 11px/1.45 var(--val-mono); }
+.lee-checkpoint-intro span { max-width: 76ch; color: var(--val-fg4); font: 9.5px/1.5 var(--val-mono); }
+.lee-approval-summary { display: grid; grid-template-columns: 90px minmax(0, 1fr); gap: 9px; padding: 8px 12px; overflow-wrap: anywhere; border-top: 1px solid var(--val-border); color: var(--val-fg2); font: 500 10px/1.45 var(--val-mono); }
+.lee-approval-summary > span { color: var(--val-fg4); font-size: 8.5px; letter-spacing: .05em; text-transform: uppercase; }
+.lee-approval pre {
+  max-height: 180px; margin: 0; padding: 8px 10px; overflow: auto; border-top: 1px solid var(--val-border);
+  background: var(--val-bg); color: var(--val-fg2); white-space: pre-wrap; word-break: break-word;
+  font: 10px/1.5 var(--val-mono);
+}
+.lee-approval-head kbd {
+  padding: 4px 6px; border: 1px solid color-mix(in srgb, var(--val-border) 82%, transparent);
+  border-radius: 4px; background: var(--val-bg); color: var(--val-fg4);
+  font: 8px/1 var(--val-mono); white-space: nowrap;
+}
+@container (max-width: 520px){
+  .lee-approval-head { grid-template-columns: 11px minmax(0, 1fr); }
+  .lee-approval-head kbd { grid-column: 2; justify-self: start; }}
+@container (max-width: 380px){
+  .lee-checkpoint-intro { padding-left: 12px; }
+  .lee-approval-summary { grid-template-columns: 1fr; }}
+.lee-proposal-tabs { display: flex; gap: 1px; padding: 0 8px; border-top: 1px solid var(--val-border); border-bottom: 1px solid var(--val-border); }
+.lee-proposal-tabs button { padding: 6px 8px 5px; border: 0; border-bottom: 2px solid transparent; background: transparent;
+  color: var(--val-fg4); cursor: pointer; font: 600 9px/1 var(--val-mono); letter-spacing: .05em; text-transform: uppercase; }
+.lee-proposal-tabs button:hover { color: var(--val-fg2); }
+.lee-proposal-tabs button.active { border-bottom-color: var(--val-aqua); color: var(--val-fg); }
+.lee-proposal-pane { display: none; min-height: 72px; }
+.lee-proposal-pane.active { display: block; animation: lee-agent-detail-in .18s cubic-bezier(.16,1,.3,1) both; }
+.lee-proposal-fields { display: grid; gap: 8px; padding: 9px 10px 11px; }
+.lee-proposal-fields label, .lee-proposal-fields [data-schema-fields] { display: grid; gap: 5px; color: var(--val-fg4); font-size: 9.5px; }
+.lee-proposal-fields label > span { color: var(--val-fg4); font: 9px/1.2 var(--val-mono); text-transform: uppercase; }
+.lee-proposal-fields textarea { min-height: 96px; margin: 0; resize: vertical; color: var(--val-fg2); font: 10px/1.45 var(--val-mono); }
+.lee-proposal-field-editor { min-height: 96px; overflow: hidden; border: 1px solid var(--val-border); border-radius: 4px; background: var(--val-bg); }
+.lee-proposal-field-editor .cm-editor { min-height: 96px; max-height: 280px; font-size: 10px; }
+.lee-proposal-check { display: flex !important; align-items: center; }
+.lee-proposal-json { width: calc(100% - 16px); min-height: 150px; margin: 8px; resize: vertical; color: var(--val-fg2); font: 10px/1.5 var(--val-mono); }
+.lee-proposal-code { max-height: 230px !important; min-height: 70px; }
+.lee-proposal-empty { padding: 18px 10px; color: var(--val-fg4); }
+.lee-proposal-loading { display: flex; align-items: center; gap: 4px; padding: 20px 10px; color: var(--val-fg4); font-size: 10px; }
+.lee-proposal-loading i { width: 4px; height: 12px; border-radius: 1px; background: var(--val-aqua); animation: lee-agent-wave 1s ease-in-out infinite; }
+.lee-proposal-loading i:nth-child(2) { animation-delay: -.18s; }.lee-proposal-loading i:nth-child(3) { animation-delay: -.36s; }
+.lee-proposal-loading span { margin-left: 5px; }
+.lee-proposal-error { min-height: 0; padding: 0 10px; color: var(--val-red); font: 9.5px/1.4 var(--val-mono); }
+.lee-proposal-error:not(:empty) { padding-block: 6px; border-top: 1px solid var(--val-border); }
+.lee-proposal-steer { padding: 8px 10px; border-top: 1px solid var(--val-border); }
+.lee-proposal-steer label { display: grid; gap: 5px; color: var(--val-fg4); font: 9px/1.35 var(--val-mono); }
+.lee-approval-actions { display: flex; align-items: center; gap: 7px; padding: 8px 10px; border-top: 1px solid var(--val-border); font-size: 10px; }
+.lee-run-policy-label { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 6px; color: var(--val-fg4); font: 8.5px/1 var(--val-mono); }
+.lee-approval:not(.proposed) .lee-approval-head { padding-bottom: 6px; }
+.lee-approval:not(.proposed) .lee-approval-head kbd,
+.lee-approval:not(.proposed) .lee-checkpoint-intro,
+.lee-approval:not(.proposed) .lee-proposal-tabs,
+.lee-approval:not(.proposed) .lee-proposal-pane,
+.lee-approval:not(.proposed) .lee-proposal-error,
+.lee-approval:not(.proposed) .lee-proposal-steer { display: none; }
+.lee-approval:not(.proposed) .lee-approval-summary { padding-block: 3px 9px; }
+.lee-approval:not(.proposed) .lee-approval-actions {
+  min-height: 40px; padding-inline: 12px; color: var(--val-fg3);
+  background: color-mix(in srgb, var(--val-bg) 38%, var(--val-bg1));
+}
+.lee-approval:not(.proposed) .lee-approval-actions > span { display: grid; gap: 2px; margin-right: auto; }
+.lee-approval:not(.proposed) .lee-approval-actions > span strong { color: var(--val-fg2); font: 600 9.5px/1.3 var(--val-mono); }
+.lee-approval:not(.proposed) .lee-approval-actions > span small { max-width: 68ch; color: var(--val-fg4); font: 8.75px/1.4 var(--val-mono); }
+.lee-composer-control { width: 82px; font-family: var(--val-mono); }
+.lee-checkpoint-result { border-top: 1px solid var(--val-border); background: var(--val-bg); }
+.lee-checkpoint-result > summary { display: flex; align-items: baseline; gap: 8px; padding: 8px 11px; cursor: pointer; list-style: none; }
+.lee-checkpoint-result > summary::-webkit-details-marker { display: none; }
+.lee-checkpoint-result > summary::after { content: '›'; margin-left: auto; color: var(--val-fg4); transition: transform .18s cubic-bezier(.16,1,.3,1); }
+.lee-checkpoint-result[open] > summary::after { transform: rotate(90deg); }
+.lee-checkpoint-result > summary:hover { background: var(--val-active-line); }
+.lee-checkpoint-result > summary strong { color: var(--val-fg2); font: 600 10px/1.3 var(--val-mono); }
+.lee-checkpoint-result > summary span { color: var(--val-fg4); font: 9px/1.3 var(--val-mono); }
+.lee-checkpoint-result > pre { max-height: 260px; margin: 0; padding: 10px 11px; overflow: auto; border-top: 1px solid var(--val-border); white-space: pre-wrap; overflow-wrap: anywhere; color: var(--val-fg2); font: 10px/1.5 var(--val-mono); }
+.lee-proposal-branch { padding: 0; border-top: 1px solid var(--val-border); background: color-mix(in srgb, var(--val-aqua) 2%, var(--val-bg1)); }
+.lee-proposal-branch > header, .lee-proposal-branch > footer { display: flex; align-items: center; gap: 8px; padding: 8px 11px; }
+.lee-proposal-branch > header strong { color: var(--val-aqua); font: 600 10px/1.4 var(--val-mono); }
+.lee-proposal-branch > header span { min-width: 0; flex: 1; color: var(--val-fg2); font: 9.5px/1.4 var(--val-mono); }
+.lee-proposal-branch > footer { border-top: 1px solid var(--val-border); color: var(--val-fg4); font: 9px/1.4 var(--val-mono); }
+.lee-proposal-branch > footer button { margin-left: auto; }
+.lee-approval.rolled-back { opacity: .72; border-left-color: var(--val-red); }
+/* One row per run, and a fan-out has one per subagent. `flex: none` or the log squashes the strip
+   back to one row and the rest spills over the conversation; `max-height` or twenty take the pane. */
+.lee-agent-runstrip { display: flex; align-items: center; gap: 6px; min-height: 34px; flex: none;
+  max-height: 40%; overflow-y: auto; padding: 5px 8px; border-top: 1px solid var(--val-border);
+  background: color-mix(in srgb, var(--val-bg1) 92%, transparent); box-shadow: inset 0 1px color-mix(in srgb, var(--val-fg) 3%, transparent); }
+.lee-agent-runstrip[hidden] { display: none; }
+.lee-agent-harness-banner { padding: 6px 9px; border-top: 1px solid var(--val-warning);
+  background: color-mix(in srgb, var(--val-warning) 12%, transparent); color: var(--val-fg);
+  font-size: 11px; line-height: 1.45; }
+.lee-agent-harness-banner[hidden] { display: none; }
+.lee-agent-harness-banner strong { color: var(--val-warning); }
+.lee-agent-run-state { display: grid; flex: 1 1 auto; min-width: 0; gap: 4px; overflow: hidden; color: var(--val-fg2); font: 600 9.5px/1.3 var(--val-mono); }
+.lee-agent-run { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.lee-agent-run > span { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* A refused call is the person speaking mid-turn, so it reads as them rather than as a tool. */
+.lee-agent-steer-step > summary .lee-agent-step-copy strong { margin-right: 6px; color: var(--val-aqua); }
+.lee-agent-steer-step > summary .lee-agent-step-copy { color: var(--val-fg); white-space: normal; }
+.lee-agent-steer-step { border-left: 2px solid var(--val-aqua); }
+.lee-agent-run time { flex: none; color: var(--val-fg4); font-variant-numeric: tabular-nums; }
+.lee-agent-run button { flex: none; border: 1px solid var(--val-border); background: transparent; color: var(--val-red); font: inherit; cursor: pointer; }
+/* Several runs: the rows take the whole width and the two wide buttons wrap under them. */
+.lee-agent-runstrip.fanned { flex-wrap: wrap; align-items: flex-start; }
+.lee-agent-runstrip.fanned .lee-agent-run-state { flex: 1 1 100%; }
+.lee-agent-memory-modal { padding: 2.5vh 2.5vw; }
+.lee-memory-workbench { display: grid; grid-template-columns: minmax(420px, 1.35fr) minmax(250px, .65fr); flex: 1 1 auto; min-height: 0; overflow: hidden; }
+.lee-memory-note-list, .lee-memory-routing { min-width: 0; min-height: 0; border-right: 1px solid var(--val-border); background: var(--val-bg1); }
+.lee-memory-note-list { display: none; grid-template-rows: auto auto minmax(0, 1fr); }
+.lee-memory-note-list > header, .lee-memory-routing > header { display: flex; align-items: center; gap: 8px; min-height: 42px; padding: 8px 10px; border-bottom: 1px solid var(--val-border); }
+.lee-memory-note-list > header strong, .lee-memory-routing > header strong { color: var(--val-fg); font: 600 10px/1.3 var(--val-mono); }
+.lee-memory-note-list > [data-note-list] { overflow: auto; border-top: 1px solid var(--val-border); }
+.lee-memory-note-row { display: grid; grid-template-columns: minmax(0, 1fr) 24px; align-items: start; gap: 8px; width: 100%; padding: 10px; border: 0; border-bottom: 1px solid var(--val-border); background: transparent; color: var(--val-fg2); cursor: pointer; text-align: left; }
+.lee-memory-note-row:hover { background: var(--val-active-line); }.lee-memory-note-row.active { background: var(--val-sel); box-shadow: inset 2px 0 var(--val-aqua); }
+.lee-memory-note-row > span { display: grid; min-width: 0; gap: 4px; }.lee-memory-note-row strong { overflow: hidden; color: var(--val-fg); font: 600 10px/1.3 var(--val-mono); text-overflow: ellipsis; white-space: nowrap; }
+.lee-memory-note-row small { display: -webkit-box; overflow: hidden; color: var(--val-fg4); font: 9px/1.4 var(--val-mono); -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.lee-memory-route-badges { display: grid; grid-template-columns: repeat(3, 1fr); width: 24px; overflow: hidden; border: 1px solid var(--val-border); border-radius: 3px; }
+.lee-memory-route-badges i { display: grid; place-items: center; min-width: 0; height: 19px; color: var(--val-fg4); font: 500 7px/1 var(--val-mono); font-style: normal; }.lee-memory-route-badges i.active { background: color-mix(in srgb, var(--val-aqua) 14%, var(--val-bg)); color: var(--val-aqua); }
+.lee-memory-note-none { padding: 14px 10px; color: var(--val-fg4); font: 9.5px/1.5 var(--val-mono); }
+.lee-memory-note-editor { min-width: 0; min-height: 0; background: var(--val-bg); }
+.lee-memory-note-editor > [data-note-form] { height: 100%; display: grid; grid-template-rows: auto auto minmax(0, 1fr); }.lee-memory-note-editor > [data-note-form][hidden] { display: none; }
+.lee-memory-editor-head { display: flex; align-items: center; min-height: 34px; padding: 7px 12px; border-bottom: 1px solid var(--val-border); color: var(--val-fg2); font: 600 9.5px/1.2 var(--val-mono); }
+.lee-memory-editor-head small { margin-left: auto; color: var(--val-fg4); font-weight: 400; }
+.lee-memory-note-cm { min-height: 0; overflow: hidden; }.lee-memory-note-cm .cm-editor { height: 100%; font-size: 11.5px; }.lee-memory-note-cm .cm-scroller { line-height: 1.65; }.lee-memory-note-cm .cm-content { max-width: 76ch; padding: 18px 20px 40px; overflow-wrap: anywhere; }
+.lee-memory-note-empty { height: 100%; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 8px; padding: 28px; }
+.lee-memory-note-empty[hidden] { display: none; }
+.lee-memory-note-empty strong { color: var(--val-fg); font-size: 13px; }.lee-memory-note-empty span { max-width: 46ch; color: var(--val-fg4); font-size: 10px; line-height: 1.55; }
+.lee-memory-routing { overflow: auto; border-right: 0; border-left: 1px solid var(--val-border); }
+.lee-memory-routing > header { display: grid; gap: 3px; }.lee-memory-routing > header span { color: var(--val-fg4); font: 8.75px/1.35 var(--val-mono); }
+.lee-memory-routing > [data-memory-targets] { padding: 6px 8px; }
+.lee-memory-target { display: grid; grid-template-columns: 18px minmax(0, 1fr); align-items: center; gap: 7px; padding: 8px 6px; border-bottom: 1px solid var(--val-border); cursor: pointer; }
+.lee-memory-target input { accent-color: var(--val-aqua); }.lee-memory-target > span { display: grid; gap: 2px; }.lee-memory-target strong { color: var(--val-fg2); font: 600 9.5px/1.3 var(--val-mono); }.lee-memory-target small { color: var(--val-fg4); font: 8.5px/1.3 var(--val-mono); }
+.lee-memory-target.active { background: color-mix(in srgb, var(--val-aqua) 5%, transparent); }
+.lee-memory-routing-help { padding: 12px 14px; border-top: 1px solid var(--val-border); }.lee-memory-routing-help > strong { color: var(--val-fg2); font: 600 9.5px/1.3 var(--val-mono); }
+.lee-memory-routing-help p { margin: 8px 0 0; color: var(--val-fg4); font: 9px/1.45 var(--val-mono); }.lee-memory-routing-help p b { color: var(--val-fg2); }
+.lee-memory-budget { display: grid; gap: 3px; margin: 4px 12px 14px; padding: 9px 10px; border-left: 2px solid var(--val-aqua); background: var(--val-bg); }
+.lee-memory-budget strong { color: var(--val-fg); font: 600 10px/1.3 var(--val-mono); }.lee-memory-budget span { color: var(--val-fg4); font: 8.5px/1.4 var(--val-mono); }
+@media (max-width: 900px){
+  .lee-agent-memory-modal { padding: 0; }
+  .lee-memory-workbench { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr) auto; overflow: auto; }
+  .lee-agent-memory-modal [data-note-status] { flex: 1 1 180px; }
+  .lee-memory-routing { display: grid; grid-template-columns: minmax(220px, .75fr) minmax(320px, 1fr); max-height: 230px; border-top: 1px solid var(--val-border); border-left: 0; }}
+
+.lee-agent-state-modal { padding: 3vh 3vw; }
+.lee-agent-state-grid { display: grid; grid-template-columns: minmax(380px,1.12fr) minmax(300px,.88fr); min-height: 0; flex: 1 1 auto; overflow: hidden; }
+.lee-agent-state-grid > section { min-width: 0; min-height: 0; overflow: auto; border-right: 1px solid var(--val-border); }
+.lee-agent-state-grid > section:first-child { display: flex; flex-direction: column; overflow: hidden; }
+.lee-agent-state-grid > section + section { border-right: 0; }
+.lee-agent-state-grid h4 { margin: 0; padding: 8px 10px; border-bottom: 1px solid var(--val-border); color: var(--val-fg4); font: 600 9px/1 var(--val-mono); text-transform: uppercase; }
+.lee-state-editor-head { display: flex; align-items: center; gap: 4px; padding: 6px 12px; border-top: 1px solid var(--val-border); border-bottom: 1px solid var(--val-border); }
+.lee-state-editor-head > span { margin-right: auto; color: var(--val-fg4); font: 600 9px/1 var(--val-mono); letter-spacing: .05em; text-transform: uppercase; }
+.lee-agent-state-editor { min-height: 220px; flex: 1 1 auto; overflow: hidden; background: var(--val-bg); }
+.lee-agent-state-editor .cm-editor { height: 100%; font-size: 12px; }
+.lee-agent-state-editor .cm-scroller { overflow: auto; line-height: 1.65; }
+.lee-agent-state-editor .cm-content { max-width: 82ch; padding: 18px 22px 34px; caret-color: var(--val-accent); }
+.lee-agent-state-editor .cm-line:has(.tok-heading) { color: var(--val-fg); font-weight: 650; }
+.lee-agent-state-editor .tok-heading { color: var(--val-aqua); }
+.lee-agent-state-editor .tok-meta { color: var(--val-fg4); }
+.lee-agent-state-reference { display: flex; flex-direction: column; overflow: hidden !important; background: var(--val-bg); }
+.lee-state-ref-tabs { display: flex; flex: none; gap: 1px; padding: 0 7px; border-bottom: 1px solid var(--val-border); background: var(--val-bg1); }
+.lee-state-ref-tabs button { padding: 8px 7px 6px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--val-fg4); cursor: pointer; font: 600 9px/1 var(--val-mono); text-transform: uppercase; letter-spacing: .04em; }
+.lee-state-ref-tabs button.active { border-bottom-color: var(--val-aqua); color: var(--val-fg); }
+.lee-state-ref-pane { display: none; min-height: 0; flex: 1 1 auto; overflow: auto; }
+.lee-state-ref-pane.active { display: block; }
+.lee-state-tool-list { padding: 4px; }
+.lee-state-tool-list button { width: 100%; display: flex; flex-direction: column; gap: 3px; padding: 8px 9px; border: 0; border-bottom: 1px solid var(--val-border); background: transparent; color: var(--val-fg2); cursor: pointer; text-align: left; }
+.lee-state-tool-list button:hover { background: var(--val-active-line); }.lee-state-tool-list strong { color: var(--val-aqua); font: 600 10.5px/1.3 var(--val-mono); }.lee-state-tool-list span { color: var(--val-fg4); font-size: 10px; line-height: 1.4; }
+.lee-agent-state-help { flex: none; padding: 8px 12px 10px; border-top: 1px solid var(--val-border); color: var(--val-fg4); font-size: 10px; }
+.lee-agent-conversation { max-height: 220px; margin: 0; padding: 10px; overflow: auto; border-bottom: 1px solid var(--val-border); color: var(--val-fg2); white-space: pre-wrap; font: 9.5px/1.5 var(--val-mono); }
+.lee-agent-state-list { padding: 4px; }
+.lee-agent-state-row { width: 100%; display: flex; flex-direction: column; gap: 2px; padding: 7px 8px; border: 0; border-bottom: 1px solid var(--val-border); background: transparent; color: var(--val-fg2); cursor: pointer; text-align: left; }
+.lee-agent-state-row:hover, .lee-agent-state-row.active { background: var(--val-sel); }.lee-agent-state-row span { color: var(--val-fg4); font-size: 9px; }
+.lee-state-origin { display: flex; gap: 6px; align-items: baseline; }
+.lee-state-origin em { color: var(--val-fg3); font-style: normal; text-transform: uppercase; letter-spacing: .04em; }
+.lee-state-here { color: var(--val-ok, var(--val-fg3)); }
+.lee-agent-state-row.mine strong { color: var(--val-fg); }
+.lee-agent-state-onboard { display: grid; grid-template-columns: minmax(220px,1fr) minmax(260px,1.2fr) auto auto; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--val-border); background: color-mix(in srgb, var(--val-aqua) 5%, var(--val-bg1)); }
+.lee-agent-state-onboard > div { display: flex; flex-direction: column; gap: 2px; }.lee-agent-state-onboard strong { color: var(--val-fg); font-size: 11px; }.lee-agent-state-onboard span { color: var(--val-fg4); font-size: 9.5px; line-height: 1.35; }.lee-agent-state-onboard.configured { background: var(--val-bg1); }
+.lee-agent-state-controls { display: flex; align-items: end; gap: 6px; padding: 9px 12px 0; }
+.lee-agent-state-controls label { display: grid; flex: 1; gap: 4px; color: var(--val-fg4); font-size: 9px; text-transform: uppercase; }
+/* the layer toggle is a checkbox beside its word, not a stacked field like the two next to it */
+.lee-agent-state-controls label.lee-state-enabled { display: flex; flex: none; align-items: center; gap: 5px; padding-bottom: 5px; cursor: pointer; }
+.lee-agent-state-controls label.lee-state-enabled input { margin: 0; }
+.lee-agent-state-suggestion { padding: 3px 7px; border: 1px solid var(--val-aqua); border-radius: 3px; background: transparent; color: var(--val-aqua); cursor: pointer; font: 9px/1.3 var(--val-mono); }
+.lee-response-revision { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 3px 4px 12px; padding-top: 7px; border-top: 1px solid var(--val-border); }
+/* three controls in a narrow column used to squeeze the label to one character per line */
+.lee-response-revision span { margin-right: auto; color: var(--val-fg4); font: 9px/1.3 var(--val-mono); white-space: nowrap; }
+.lee-response-revision.rolled-back { opacity: .65; }
+/* A rolled-back turn is dimmed, not deleted: the files are restored, the model still has the turn. */
+.lee-turn-undone { opacity: .42; filter: saturate(.5); }
+.lee-turn-undone-bar { border-top-style: dashed; }
+.lee-turn-undone-bar span { color: var(--val-fg2); }
+.lee-revision-explainer { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px 16px; padding: 11px 14px; border-bottom: 1px solid var(--val-border); background: color-mix(in srgb, var(--val-aqua) 4%, var(--val-bg1)); }
+.lee-revision-explainer strong { color: var(--val-fg); font: 600 10.5px/1.45 var(--val-mono); }
+.lee-revision-explainer span { max-width: 78ch; color: var(--val-fg4); font: 9.5px/1.5 var(--val-mono); }
+.lee-revision-layout { display: grid; grid-template-columns: minmax(320px, 1fr) minmax(300px, .9fr); flex: 1 1 auto; min-height: 0; overflow: hidden; }
+.lee-revision-editor { display: flex; min-width: 0; min-height: 0; flex-direction: column; border-right: 1px solid var(--val-border); }
+.lee-revision-editor > span, .lee-revision-preview > header { display: flex; align-items: center; gap: 7px; min-height: 34px; padding: 8px 12px; border-bottom: 1px solid var(--val-border); color: var(--val-fg2); font: 600 9.5px/1.3 var(--val-mono); }
+.lee-revision-editor > span b, .lee-revision-preview header small { margin-left: auto; color: var(--val-fg4); font-size: 8.5px; font-weight: 400; letter-spacing: .04em; text-transform: uppercase; }
+.lee-revision-preview { min-width: 0; min-height: 0; overflow: auto; background: var(--val-bg1); }
+@media (max-width: 760px){
+  .lee-response-editor-modal { padding: 0; }
+  .lee-revision-explainer, .lee-revision-layout { grid-template-columns: 1fr; }
+  .lee-revision-explainer { gap: 4px; }
+  .lee-revision-layout { grid-template-rows: minmax(280px, 1fr) minmax(220px, .75fr); overflow: auto; }
+  .lee-revision-editor { border-right: 0; border-bottom: 1px solid var(--val-border); }}
+.lee-turn-usage { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; margin: 3px 8px 10px; padding: 5px 8px; border-top: 1px solid color-mix(in srgb, var(--val-border) 70%, transparent); color: var(--val-fg4); font: 9.5px/1.3 var(--val-mono); font-variant-numeric: tabular-nums; }
+.lee-turn-usage > span:not(:first-child):not(.model)::after { content: '·'; margin-left: 5px; color: var(--val-border); }.lee-turn-usage .model { margin-left: auto; color: var(--val-fg3); }.lee-turn-usage-mark { color: var(--val-aqua); font-weight: 700; }
+.lee-agent-welcome { display: grid; gap: 9px; max-width: 34rem; margin: 22px auto; padding: 16px; border-left: 2px solid var(--val-aqua); background: color-mix(in srgb, var(--val-aqua) 4%, var(--val-bg)); }
+.lee-agent-welcome strong { color: var(--val-fg); font-size: 12px; letter-spacing: -.01em; }.lee-agent-welcome span { max-width: 46ch; color: var(--val-fg4); font-size: 10.5px; line-height: 1.55; }
+.lee-compaction-event { margin: 5px 0; border-top: 1px solid var(--val-aqua); border-bottom: 1px solid var(--val-border); background: color-mix(in srgb, var(--val-aqua) 4%, transparent); }
+.lee-compaction-event summary { padding: 7px 9px; color: var(--val-aqua); cursor: pointer; font: 9.5px/1.35 var(--val-mono); }
+.lee-compaction-event pre { max-height: 240px; margin: 0; padding: 8px 9px; overflow: auto; border-top: 1px solid var(--val-border); color: var(--val-fg2); white-space: pre-wrap; font: 9.5px/1.5 var(--val-mono); }
+@media (max-width: 1100px){
+  .lee-agent-state-onboard { grid-template-columns: 1fr 1fr; }
+  .lee-agent-state-onboard > div { grid-column: 1 / -1; }}
+@media (max-width: 680px){
+  .lee-approval-actions { display: grid; grid-template-columns: 1fr 1fr; }
+  .lee-agent-state-modal { padding: 0; }
+  .lee-agent-state-grid { grid-template-columns: 1fr; grid-template-rows: minmax(420px, 1.15fr) minmax(260px,.85fr); overflow: auto; }
+  .lee-agent-state-grid > section { overflow: hidden; border-right: 0; border-bottom: 1px solid var(--val-border); }
+  .lee-agent-state-onboard { grid-template-columns: 1fr; }
+  .lee-agent-state-onboard > div { grid-column: auto; }
+  .lee-state-editor-head { overflow-x: auto; }}
+.lee-setup-panes { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; min-width: 0; }
+.lee-setup-panes > * { min-width: 0; }
+.lee-setup-pane { border: 1px solid var(--val-border); border-radius: 6px; padding: 10px 12px; }
+.lee-setup-pane.recommended { border-color: var(--val-accent); }
+.lee-setup-pane h4 { margin: 0 0 8px; display: flex; justify-content: space-between;
+                     align-items: baseline; gap: 8px; font-size: 12px; }
+.lee-setup-pane h4 small { color: var(--val-fg4); font-weight: 400; }
+.lee-setup-updates { margin: 4px 0 0; }
+/* These rows were `.lee-krow`, the keyboard-help row: a flex line with `nowrap` and an ellipsis on
+   every span, which cut `ready` to `rea\2026` and every blurb mid-sentence. A name and its state on
+   one line, the sentence under them, and nothing truncated. */
+.lee-setup-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px;
+                 align-items: baseline; padding: 7px 0; border-top: 1px solid var(--val-border); }
+.lee-setup-row:first-of-type { border-top: 0; }
+.lee-setup-row > span:first-child { min-width: 0; color: var(--val-fg2); }
+.lee-setup-row small { display: inline-block; color: var(--val-fg4); font-size: 10px; line-height: 1.5; }
+.lee-setup-row small.warn { color: var(--val-red); }
+.lee-setup-row > button, .lee-setup-row > a { justify-self: end; }
+.lee-shape-row textarea { display: block; width: 100%; margin-top: 4px; resize: vertical; }
+.lee-shape-row label { justify-self: end; white-space: nowrap; color: var(--val-fg4); font-size: 10px; }
+.lee-setup-body { padding: 10px 12px; }
+.lee-setup-body > h4 { margin: 12px 0 6px; font-size: 12px; }
+.lee-promptbar { flex: none; padding: 6px 8px 7px; border-top: 1px solid var(--val-border); background: var(--val-bg1); }
+.lee-agent-composer { position: relative; }
+.lee-prompt {
+  width: 100%; min-height: 64px; max-height: 190px; padding: 9px 10px; resize: none; overflow-y: auto;
+  line-height: 1.5; font-family: var(--val-mono); border-radius: 6px 6px 3px 3px;
+}
+.lee-composer-footer { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 6px; min-width: 0; padding-top: 7px; }
+.lee-composer-primary { display: grid; grid-template-columns: minmax(0, 1fr) minmax(74px, .58fr) minmax(92px, .72fr) 58px auto; gap: 5px; min-width: 0; }
+.lee-composer-model, .lee-composer-control, .lee-composer-reasoning, .lee-composer-budget { width: 100%; min-width: 0; }
+.lee-agent-budget-status { color: var(--val-fg4); font: 10px var(--val-mono); white-space: nowrap; }
+.lee-composer-send { min-width: 52px; min-height: 29px; flex: none; font-weight: 650; }
+.lee-agent-composer { padding: 8px 9px 9px; }
+.lee-agent-composer .lee-prompt { border-color: color-mix(in srgb, var(--val-border) 82%, var(--val-fg4)); background: var(--val-bg); }
+.lee-agent-composer .lee-prompt:focus { border-color: var(--val-accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--val-accent) 13%, transparent); }
+.lee-routing { position: relative; flex: none; }
+.lee-routing > summary { min-height: 28px; display: grid; place-items: center; padding: 3px 7px; border: 1px solid transparent; border-radius: 4px; color: var(--val-fg4); cursor: pointer; font-size: 10px; list-style: none; }
+.lee-routing > summary:hover { border-color: var(--val-border); background: var(--val-bg2); color: var(--val-fg2); }
+.lee-routing > summary::-webkit-details-marker { display: none; }
+.lee-routing[open] > summary { color: var(--val-accent); }
+.lee-routing-popover { position: absolute; right: 0; bottom: calc(100% + 7px); z-index: 22; width: min(300px, calc(100vw - 24px));
+  display: grid; gap: 8px; padding: 11px; border: 1px solid var(--val-border); border-radius: 7px;
+  background: var(--val-bg1); box-shadow: 0 14px 34px rgba(0,0,0,.32); }
+.lee-routing-popover label { display: grid; grid-template-columns: 82px minmax(0,1fr); align-items: center; gap: 7px;
+  color: var(--val-fg4); font-size: 10px; }
+/* The `?` is a third child of a two-column row, so on its own it took the control's column and
+   pushed the select onto a second line, into the 82px label column. Name and mark are one item. */
+.lee-routing-popover label > .lee-routing-name { display: flex; align-items: center; min-width: 0; }
+.lee-agent-attachments { display: flex; gap: 5px; padding-bottom: 5px; overflow-x: auto; }
+.lee-agent-attachments:empty { display: none; }
+.lee-agent-attachbar { display: flex; justify-content: flex-end; padding-bottom: 5px; }
+.lee-agent-attachment {
+  display: inline-flex; align-items: center; gap: 5px; max-width: 210px; padding: 3px 5px 3px 7px;
+  border: 1px solid var(--val-border); border-radius: 4px; background: var(--val-bg2);
+  color: var(--val-fg2); font: 10px/1.3 var(--val-mono); white-space: nowrap;
+}
+.lee-agent-attachment span { overflow: hidden; text-overflow: ellipsis; }
+/* Three kinds of context, told apart at a glance: a file is the plain chip, a folder is a
+   listing the agent will read around in, and a selection is a range you chose by hand. */
+.lee-agent-attachment.folder { border-style: dashed; }
+.lee-agent-attachment.folder span::before { content: '⌸ '; color: var(--val-fg4); }
+.lee-agent-attachment.selection {
+  border-color: color-mix(in srgb, var(--val-accent) 45%, var(--val-border));
+  color: var(--val-fg);
+}
+.lee-agent-attachment.selection span::before { content: '❰ '; color: var(--val-accent); }
+.lee-agent-context { display: inline-flex; align-items: center; max-width: 230px; padding: 3px 7px;
+  border: 1px solid color-mix(in srgb, var(--val-accent) 28%, var(--val-border)); border-radius: 4px;
+  color: var(--val-fg4); font: 9.5px/1.3 var(--val-mono); white-space: nowrap; }
+.lee-agent-context span { overflow: hidden; text-overflow: ellipsis; }
+.lee-agent-attachment button { border: 0; background: transparent; color: var(--val-fg4); cursor: pointer; font-size: 9px; }
+.lee-agent-attachment button:hover { color: var(--val-red); }
+.lee-model-pick { display: inline-flex; align-items: center; overflow: hidden; text-align: left;
+  text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
+.lee-model-pick::after { flex: none; margin-left: auto; padding-left: 6px; content: '⌄'; color: var(--val-fg4); }
+.lee-model-menu { position: fixed; z-index: 60; display: flex; flex-direction: column; overflow: hidden; padding: 4px;
+  border: 1px solid var(--val-border); border-radius: 6px; background: var(--val-bg1);
+  box-shadow: 0 14px 34px color-mix(in srgb, var(--val-bg) 72%, transparent);
+  animation: lee-popover-in .12s cubic-bezier(.16,1,.3,1) both; }
+.lee-model-filter { margin: 0 0 4px; }
+.lee-model-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.lee-model-row { display: block; width: 100%; overflow: hidden; padding: 5px 8px; border: 0;
+  border-radius: 3px; background: transparent; color: var(--val-fg2); cursor: pointer;
+  text-align: left; text-overflow: ellipsis; white-space: nowrap; font: 10.5px/1.35 var(--val-mono); }
+.lee-model-row:hover, .lee-model-row.active { background: var(--val-sel); color: var(--val-fg); }
+.lee-model-row.chosen { color: var(--val-accent); }
+.lee-model-empty { padding: 8px; color: var(--val-fg4); font: 10px/1.4 var(--val-mono); }
+.lee-agent-suggest {
+  position: absolute; left: 8px; right: 8px; bottom: calc(100% - 1px); z-index: 20;
+  max-height: 260px; padding: 4px; overflow: auto; border: 1px solid var(--val-border);
+  border-radius: 6px 6px 0 0; background: var(--val-bg1);
+  box-shadow: 0 -14px 34px color-mix(in srgb, var(--val-bg) 72%, transparent);
+}
+.lee-agent-suggest[hidden] { display: none; }
+.lee-agent-suggest-row {
+  display: grid; grid-template-columns: minmax(110px, auto) minmax(0, 1fr); gap: 10px; width: 100%;
+  padding: 6px 8px; border: 0; border-radius: 3px; background: transparent; color: var(--val-fg2);
+  cursor: pointer; text-align: left; font: 10.5px/1.35 var(--val-mono);
+}
+.lee-agent-suggest-row:hover, .lee-agent-suggest-row.active { background: var(--val-sel); color: var(--val-fg); }
+.lee-agent-suggest-row span { overflow: hidden; color: var(--val-fg4); text-overflow: ellipsis; white-space: nowrap; }
+.lee-memory-notes-empty { max-width: 34ch; margin: 10vh auto 0; padding: 0 8px; text-align: left; }.lee-memory-notes-empty strong { color: var(--val-fg); font-size: 13px; }.lee-memory-notes-empty p { margin: 7px 0 13px; color: var(--val-fg4); font-size: 10.5px; line-height: 1.55; }
+.lee-memory-notes-intro { display: grid; gap: 3px; padding: 9px 10px 10px; border-bottom: 1px solid var(--val-border); }.lee-memory-notes-intro span { color: var(--val-aqua); font: 600 8px/1.2 var(--val-mono); letter-spacing: .06em; text-transform: uppercase; }.lee-memory-notes-intro strong { color: var(--val-fg2); font: 500 10px/1.4 var(--val-mono); }
+.lee-memory-note-card { display: grid; grid-template-columns: minmax(0,1fr) auto auto; align-items: center; gap: 7px; padding: 9px 8px 8px 10px; border-bottom: 1px solid var(--val-border); }
+.lee-memory-note-card:hover { background: var(--val-active-line); }.lee-memory-note-open { display: grid; min-width: 0; gap: 4px; padding: 0; border: 0; background: transparent; cursor: pointer; text-align: left; }.lee-memory-note-open strong { overflow: hidden; color: var(--val-fg); font: 600 11px/1.3 var(--val-mono); text-overflow: ellipsis; white-space: nowrap; }.lee-memory-note-open span { display: -webkit-box; overflow: hidden; color: var(--val-fg4); font: 9px/1.4 var(--val-mono); -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.lee-memory-note-routes { display: flex; align-items: center; gap: 2px; }.lee-memory-note-routes label { cursor: pointer; }.lee-memory-note-routes input { position: absolute; opacity: 0; pointer-events: none; }.lee-memory-note-routes span { display: grid; place-items: center; min-width: 22px; height: 21px; padding: 0 4px; border: 1px solid var(--val-border); border-radius: 3px; color: var(--val-fg4); font: 600 7px/1 var(--val-mono); text-transform: uppercase; }.lee-memory-note-routes input:checked + span { border-color: color-mix(in srgb, var(--val-aqua) 45%, var(--val-border)); background: color-mix(in srgb, var(--val-aqua) 10%, var(--val-bg)); color: var(--val-aqua); }.lee-memory-note-routes input:focus-visible + span { outline: 2px solid var(--val-accent); outline-offset: 1px; }
+.lee-memory-note-edit { padding: 3px 4px; border: 0; background: transparent; color: var(--val-fg4); cursor: pointer; font: 8px/1 var(--val-mono); text-transform: uppercase; }.lee-memory-note-edit:hover { color: var(--val-fg); }
+.lee-memory-doc, .lee-memory-hit, .lee-memory-topic {
+  width: 100%; display: grid; grid-template-columns: 30px minmax(0,1fr) auto; align-items: start;
+  gap: 8px; padding: 9px 8px; border: 0; border-bottom: 1px solid color-mix(in srgb, var(--val-border) 72%, transparent);
+  background: transparent; color: var(--val-fg2); cursor: pointer; text-align: left;
+}
+.lee-memory-doc:hover, .lee-memory-hit:hover, .lee-memory-topic:hover { background: var(--val-active-line); }
+.lee-memory-index { color: var(--val-fg4); font: 9px/1.4 var(--val-mono); }
+.lee-memory-copy { display: flex; flex-direction: column; min-width: 0; }
+.lee-memory-copy strong { overflow: hidden; color: var(--val-fg); font: 600 11.5px/1.35 inherit; text-overflow: ellipsis; white-space: nowrap; }
+.lee-memory-copy small { margin-top: 3px; overflow: hidden; color: var(--val-fg4); font: 9.5px/1.35 var(--val-mono); text-overflow: ellipsis; white-space: nowrap; }
+.lee-memory-copy p { margin: 6px 0 0; color: var(--val-fg2); font-size: 10.5px; line-height: 1.45; }
+.lee-memory-kind { padding: 2px 5px; border: 1px solid var(--val-border); border-radius: 3px;
+  color: var(--val-fg4); font: 8.5px/1 var(--val-mono); text-transform: uppercase; }
+.lee-memory-breadcrumb { padding: 8px 9px; border-bottom: 1px solid var(--val-border); color: var(--val-fg4);
+  font: 9.5px/1.45 var(--val-mono); }
+.lee-memory-reader { padding: 15px 14px 30px; color: var(--val-fg2); font-size: 12.5px; line-height: 1.65; }
+.lee-memory-reader > :first-child { margin-top: 0; }
+.lee-memory-tree { padding-left: calc(var(--depth) * 12px); }
+.lee-memory-back { margin: 0; }
+.lee-memory-tree-actions { display: flex; justify-content: space-between; gap: 6px; padding: 4px 5px 8px; }
+.lee-memory-purge-list { max-height: 55vh; overflow: auto; padding: 5px; }
+.lee-memory-purge-list label { display: grid; grid-template-columns: 22px minmax(0,1fr); align-items: start;
+  gap: 7px; padding: 7px 8px; border-bottom: 1px solid var(--val-border); cursor: pointer; }
+.lee-memory-purge-list label:hover { background: var(--val-active-line); }
+.lee-memory-purge-list input { margin-top: 3px; accent-color: var(--val-red); }
+.lee-memory-purge-list span { display: flex; flex-direction: column; min-width: 0; }
+.lee-memory-purge-list strong, .lee-memory-purge-list small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lee-memory-purge-list strong { color: var(--val-fg); font-size: 11.5px; }
+.lee-memory-purge-list small { margin-top: 2px; color: var(--val-fg4); font: 9.5px/1.3 var(--val-mono); }
+@media (max-width: 680px){
+  .lee-composer-reasoning { max-width: 118px; }
+  .lee-routing { display: none; }}
+:root[data-density="tight"] .lee-agent-head { min-height: 28px; padding: 2px 7px; background: var(--val-bg1); border-bottom: 1px solid color-mix(in srgb, var(--val-border) 88%, transparent); }
+:root[data-density="tight"] .lee-approval {
+  border-radius: 0; box-shadow: none; background: var(--val-bg);
+  border: 1px solid color-mix(in srgb, var(--val-border) 90%, transparent);
+}
+
+/* A vault chip in the composer reads as evidence rather than as a file on disk. */
+.lee-agent-attachment.vault { border-color: color-mix(in srgb, var(--val-accent) 50%, var(--val-border)); }
+.lee-agent-attachment.vault > span:first-child::before { content: '❋ '; color: var(--val-accent); }
+
+/* A generated picture in the agent pane: fits the pane, never the browser's intrinsic size. */
+.lee-agent-media { margin: .5rem 0; }
+.lee-agent-media img, .lee-agent-media video { max-width: 100%; height: auto; border-radius: 6px; display: block; }
+
+.lee-setup-pick { color: var(--val-green); font-weight: 600; }

@@ -20,6 +20,7 @@ dependencies = [
     "fastlucide>=0.0.7",
     "pyjwt>=2.11.0",
     "python-fasthtml>=0.14.0",
+    "ramabana>=0.1.33",
     "rcssmin>=1.2.2",
     "resend>=2.22.0",
     "rjsmin>=1.2.5",
