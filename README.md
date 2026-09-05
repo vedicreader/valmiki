@@ -1,201 +1,79 @@
-# lego
+# valmiki
 
-A FastHTML + Oat web app starter. Powers [vedicreader.com](https://vedicreader.com/).
+A modular agent UI, built one block at a time.
 
-Clone it, connect your blocks, ship it.
+The agent pane that Leela grew is being lifted out into this repository, so that one UI serves
+three hosts: [Leela](https://github.com/vedicreader/leela) mounts it in the IDE,
+[Ramabana](https://github.com/vedicreader/ramabana) mounts it as a generic agent, and valmiki
+serves it on its own as a web app you open on a phone. `docs/agent-ui.md` is the plan;
+Leela's `docs/ui-blocks.md` is the extraction half of it.
 
-## Getting started
+What is here today is the base that block lands on: a FastHTML + [Oat](https://oat.ink) app,
+a theme, and an auth block that takes a session or a bearer token.
 
-```bash
-git clone https://github.com/Karthik777/lego.git
-cd lego
-uv sync
-uv run lego-setup       # scaffold .env.example, .github workflow, and SKILL.md files
-uv run python main.py   # http://localhost:5001
-```
-
-`lego-setup` is idempotent and safe to re-run. The console scripts shipped with the package:
-
-| script | purpose |
-|---|---|
-| `uv run lego-setup` | init gheasy config, git-lfs patterns, `.env.example`, deploy workflow, install skills |
-| `uv run lego-skill` | (re)install `SKILL.md` into `.claude/skills/lego/` and `.agents/skills/lego/` |
-| `uv run lego-push` | push values from `.env` to GitHub Actions secrets/vars (use `--dry-run` to preview) |
-| `uv run lego-deploy` | Docker + Hetzner + Cloudflare tunnel deploy (`compose` \| `deploy` \| `nuke` \| `env`) |
-
-## How it works
-
-Each feature is a block: a self-contained module with its own config, routes, and database. You connect blocks to the app in order. Auth reads the full skip list at connect time, so it goes last.
-
-```python
-# lego/app.py
-b.connect(lego)   # blog
-a.connect(lego)   # auth — always last
-```
-
-Each block exposes a `connect(app)` function that registers routes, seeds data, and wires up any middleware it needs. Blocks can share a database or borrow config from each other. They can also override routes registered by earlier blocks — first in line wins.
-
-## What's included
-
-**core** handles config, logging, caching, scheduled jobs, backups, and the base UI (navbar, theme switcher, page layouts). Everything else builds on it.
-
-**auth** covers email/password registration with Resend verification, Google OAuth, and GitHub OAuth. One `connect()` call sets up all routes and session middleware. Route paths are overridable via `RouteOverrides`.
-
-**hora** is Vedic planetary hours, computed in the browser from the local sunrise and sunset. It is the block that shows what "self-contained" can stretch to: it brings its own head, its own Tailwind stylesheet and its own document, so none of the app-wide chrome reaches it. It serves `/hora` here and the whole of [sankalpa.sh](https://sankalpa.sh).
-
-**blog** is a full publishing block. Posts are seeded from Markdown files with YAML frontmatter. The list page uses a newspaper-style featured/sidebar/grid layout. Post detail pages support single-column or two-column newspaper layout, set per-post via `layout: newspaper` in the frontmatter. Code blocks never split across columns. To force a column break at a specific point in a post, add:
-
-````md
-```col
-```
-````
-
-## Project structure
-
-```
-lego/
-├── main.py
-├── lego/
-│   ├── app.py           # wire up blocks, scheduled jobs
-│   ├── auth/            # auth block
-│   ├── blog/            # blog block
-│   ├── hora/            # hora block — also serves sankalpa.sh
-│   └── core/            # config, cache, logging, backups, UI
-├── data/
-│   ├── db/              # SQLite databases
-│   ├── logs/
-│   └── cache/           # DiskCache
-└── static/
-```
-
-## Core utilities
-
-### Logging
-
-```python
-from lego.core import quick_lgr
-
-info, error, warn = quick_lgr()
-info("started")
-```
-
-`quick_lgr()` reads the calling file's name and uses it as the log filename. No configuration needed.
-
-### Caching
-
-```python
-from lego.core import cache
-
-@cache(ttl=3600)
-def expensive(param):
-    return compute(param)
-```
-
-DiskCache-backed with stampede protection. Keys are scoped to the function by `__qualname__` plus arguments.
-
-### Backups
-
-```python
-from lego.core.backups import run_backup, clone
-
-run_backup(src="data/db", max_ages="2,14,60")
-clone(src="data/db", bucket="my-app-db")   # Cloudflare R2 or S3 via rclone
-```
-
-`run_backup` keeps age-tiered snapshots. `clone` syncs to remote storage. Both are scheduled in `app.py` by default when `NEED_BACKUP=true`.
-
-### Distributed lock
-
-```python
-from lego.core import get_lock, release_lock
-
-if get_lock('my-job', ttl=60):
-    do_work()
-    release_lock('my-job')
-```
-
-## Auth setup
-
-Email/password:
-```
-RESEND_API_KEY=re_...
-```
-
-Google OAuth:
-```
-WANT_GOOGLE=true
-GOOGLE_CLI=...
-GOOGLE_SCRT=...
-# callback: {DOMAIN}/a/google/callback
-```
-
-GitHub OAuth:
-```
-WANT_GIT=true
-GIT_CLI=...
-GIT_SCRT=...
-# callback: {DOMAIN}/a/github/callback
-```
-
-Google and GitHub users are activated immediately. Email/password users get a verification link via Resend.
-
-To change the default route paths:
-
-```python
-from lego.core import RouteOverrides
-RouteOverrides.lgn = "/login"
-RouteOverrides.home = "/dashboard"
-RouteOverrides.skip += ["/public"]
-```
-
-## Extensions
-
-The dev toolchain that ships with lego:
-
-- **[kosha](https://github.com/vedicreader/kosha)** — indexes your repo and installed packages into a hybrid search + call graph database. Agents query it before writing code.
-- **[dockeasy](https://github.com/vedicreader/dockeasy)** — Dockerfile, Caddyfile, and Compose builder in Python. Framework-aware defaults, cache mounts by default, Cloudflare tunnel support.
-- **[vpseasy](https://github.com/vedicreader/vpseasy)** — provisions Hetzner VPS servers, deploys with Docker Compose, handles Caddy and tunnels. Same cloud-init YAML runs in local Multipass VMs and production.
-- **[cfeasy](https://github.com/vedicreader/cfeasy)** — idempotent Cloudflare DNS and Zero Trust tunnel management. One call to create a tunnel, wire the DNS, and get the token back.
-- **[gheasy](https://github.com/vedicreader/gheasy)** — GitHub Actions workflows in Python. Pre-built jobs for test, lint, and PyPI publish. Secret routing from env schema to `gh secret set`.
-
-`deploy.py` in the repo shows all of them composing together — Dockerfile, Compose stack, tunnel, VPS provision, and env wiring in one script.
-
-## Deployment
-
-lego is an ASGI app. `deploy.py` uses dockeasy + vpseasy + cfeasy for a full Hetzner + Cloudflare tunnel deploy:
+## Run it
 
 ```bash
-uv run lego-deploy deploy    # provisions VPS, wires tunnel, deploys
-uv run lego-deploy compose   # generate docker-compose.yml only
-uv run lego-deploy nuke      # delete VPS and tunnel (irreversible)
-uv run lego-push             # push .env values to GitHub Actions
+uv sync --group dev
+uv run python main.py     # http://localhost:5001
+uv run pytest -q
 ```
 
-The app runs at [lego.sankalpa.sh](https://lego.sankalpa.sh).
+`uv run valmiki-setup` writes `.env.example` and installs `SKILL.md` where agents look for it.
 
-### Two hostnames, one deployment
+Nothing here is meant to face the open internet. It runs on your own machine and you reach it
+from a phone over [Tailscale](https://tailscale.com), on the tailnet address of the laptop
+serving it. Set `DOMAIN` to that address so OAuth callbacks and links resolve.
 
-[sankalpa.sh](https://sankalpa.sh) is the same deployment. Not a second server, a second container, a second tunnel or even a second Cloudflare zone — the hora block already answers at `/hora`, so all the apex needs is for Caddy to know about it:
+## Blocks
+
+A feature is a folder with `cfg.py`, `data.py`, `ui.py`, `app.py`, and a `connect(app)` that
+registers its routes. `valmiki/app.py` wires them in order, and auth connects last because it
+reads the complete `RouteOverrides.skip` list at connect time.
+
+```python
+import valmiki.myblock as mb
+mb.connect(app)
+a.connect(app)   # still last
+```
+
+`valmiki/core/` is what every block may import: config, cache, logging, paths, the theme, the
+navbar and the shared atoms. `SKILL.md` documents all of it.
+
+## Auth
+
+Two ways in, and both end at the same `req.scope['auth']` dict.
+
+- **A session.** Email and password with a Resend verification link, Google OAuth, GitHub
+  OAuth. Providers switch on only when their credentials are present.
+- **A bearer token.** `Authorization: Bearer <token>` on any request. Mint one at `/a/tkn`
+  while signed in; minting replaces the previous token and **Revoke** ends it. It is a signed
+  token of its own type, so an email-verification link cannot be used as one, and it sets no
+  cookie, so an API client stays stateless.
 
 ```
-http://lego.sankalpa.sh {
-	reverse_proxy app:5001
-}
-http://sankalpa.sh {
-	rewrite / /hora
-	reverse_proxy app:5001
-}
+RESEND_API_KEY=re_...                    # email verification and password reset
+WANT_GOOGLE=true GOOGLE_CLI=... GOOGLE_SCRT=...    # callback {DOMAIN}/a/google/callback
+WANT_GIT=true    GIT_CLI=...    GIT_SCRT=...       # callback {DOMAIN}/a/github/callback
+API_TOKEN_EXP=31536000                   # bearer token lifetime, seconds
 ```
 
-`cloudflared` runs with `--url http://caddy`, so every hostname routed through the tunnel arrives at that same Caddy, and Caddy tells the two apart by the Host header it was going to read anyway. `deploy2prod` adds the apex as a proxied CNAME to the tunnel it just set up — proxied because an apex cannot hold a CNAME in plain DNS and Cloudflare serves one by flattening it. Any A record or parked CNAME already on the apex is replaced. If that step fails it warns with the record to add by hand, and the lego deploy carries on regardless.
+## Layout
 
-Only the bare `/` is rewritten, so `/static` and every other path still resolve normally on both hostnames. To move hora elsewhere, set `HORA_DOMAIN` — it feeds both the Caddyfile and the block's canonical and `og:` URLs.
-
-For remote storage, point `get_pth` in `core/cfg.py` at an S3 bucket via fsspec.
+```
+valmiki/
+  app.py        the head, the middleware, the wiring, `launch()`
+  core/         config, cache, logging, paths, theme, navbar, shared atoms
+  auth/         sessions, OAuth, bearer tokens
+static/         vendored js and css, fonts, icons. no CDN
+tests/          pytest
+docs/           the plan for the agent block
+```
 
 ## Style
 
-No ruff, no PEP 8. The code uses fastai idioms: `store_attr`, `patch`, `AttrDict`, `L`. Short functions, no docstrings unless the function name isn't enough. It reads fine on a phone.
+fastai idioms, dense code, no ruff and no PEP 8. Short functions, one-line docstrings or none,
+comments only for what the code cannot say. It reads on a phone.
 
 ## License
 

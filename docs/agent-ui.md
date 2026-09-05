@@ -9,39 +9,30 @@ below amends Phases 1 to 4.
 
 ## The package is valmiki. There is no `sabha`
 
-The plan's Phase 4 builds auth, a responsive layout, a manifest, a service worker and a deploy
-story from nothing. valmiki has four of the five already, because they are what a lego template is:
+The plan's Phase 4 builds auth, a responsive layout, a manifest and a service worker from nothing.
+valmiki has most of it already, because it is what a lego template is:
 
 | Phase 4 wants | valmiki has |
 |---|---|
-| a token on every `/agent/*` route (step 13) | `lego/auth/`: sessions, JWT, email verification, Google and GitHub OAuth, and `RouteOverrides.skip` as the allowlist auth reads at connect time |
+| a token on every `/agent/*` route (step 13) | `valmiki/auth/`: sessions, Google and GitHub OAuth, email verification, bearer tokens at `/a/tkn`, and `RouteOverrides.skip` as the allowlist auth reads at connect time |
 | a mobile layout (step 14) | Oat + `theme.css`, mode and palette switching, a font scale, a navbar that already collapses |
-| `manifest.json` and an icon set (step 15) | `static/favicon.*`, the head in `lego/app.py`, `apple-mobile-web-app-*` already set |
-| something to open on a phone | `deploy.py`: Hetzner provisioning, docker compose, a Cloudflare tunnel, `lego-push` for secrets |
+| `manifest.json` and an icon set (step 15) | `static/favicon.*` and the `apple-mobile-web-app-*` head, one manifest short |
 | assets served without a CDN or a build | `asset_js` / `asset_css` / `vendor_js`, content-hashed, with an inline fallback on a read-only filesystem |
 
 So the agent pane is `valmiki/agent/`, an ordinary block: `cfg.py`, `data.py`, `ui.py`, `app.py`,
 `agent.css`, the ES modules, and `connect(app, port)`. Leela imports the block. Ramabana imports the
-block. valmiki serves it beside blog, dash and hora, which is what makes it a template rather than a
-demonstration.
+block. valmiki serves it on its own.
 
-Three consequences, all of them decisions rather than details.
+**The base is cut down to that.** blog, dash and hora were the template's demonstrations and are
+gone, with the ten megabytes of dash seeds that would otherwise have ridden into Leela's wheel; so
+are the Hetzner, Cloudflare and Docker deploy, the scheduler and the R2 backups, which a laptop on
+a tailnet does not use. `valmiki/__init__.py` is empty, so `import valmiki.agent` will not drag the
+whole app in — Leela's server import is measured at 377ms and 48MB and the last round of that work
+was spent getting dhrishti off the startup path. What is left is `core` and `auth`, 1300 lines.
 
-**1. `__init__.py` must stop importing the app.** `lego/__init__.py` is `from .app import *`, and
-`lego/app.py` imports auth, blog, dash and hora, and through them apscheduler, diskcache and
-fastlite. `import valmiki.agent` from Leela would pay for all of it. Leela's server import is
-measured at 377ms and 48MB and the last round of that work was spent getting dhrishti *out* of the
-startup path. `__init__.py` goes empty, `main.py` and the `[project.scripts]` entries import
-`valmiki.app` by name. This is the first commit, before anything moves.
-
-**2. The wheel carries ten megabytes of dash seeds.** `lego/dash/seed/` is 9.9MB of gzipped SQL,
-inside the one package `[tool.hatch.build]` ships. Leela would pull the Chinook database to draw an
-agent pane. Either the seeds leave the wheel and `/dash` downloads or scaffolds them, or the agent
-block becomes its own distribution out of the same repository. The first is less machinery and
-`DBS` already drops a database whose dump is absent.
-
-**3. The package is renamed.** `lego` is the template's name; the repository is valmiki and two other
-packages are about to depend on it by name.
+**How it is reached.** The server runs on one laptop and the phone reaches it over Tailscale, on
+the tailnet address, with `DOMAIN` set to that address so OAuth callbacks resolve. Nothing here
+faces the open internet, which is the assumption the security note below depends on.
 
 ## The theme is a bridge, not a port
 
@@ -126,34 +117,34 @@ before 6 because 7 is what a second host is blocked on and 6 is the largest.
 
 ## Risks the extraction plan does not carry
 
-- **Server-sent events through a tunnel.** `/agent/stream` is SSE. valmiki runs behind
-  `GZipMiddleware(minimum_size=1024)`, then Caddy, then a Cloudflare tunnel, and each of the three
-  will buffer or compress a stream given the chance. `text/event-stream` needs an explicit exclusion
-  at every layer and a test that asserts the first event arrives before the response is complete.
-  This is the failure that will look like "the phone just hangs" and have nothing to do with the pane.
+- **Server-sent events and the gzip middleware.** `/agent/stream` is SSE, and valmiki runs behind
+  `GZipMiddleware(minimum_size=1024)`, which will compress and therefore buffer a stream given the
+  chance. `text/event-stream` needs an explicit exemption, and a test asserting the first event
+  arrives before the response is complete. Anything later put in front (a reverse proxy, a tunnel)
+  needs the same exemption. This is the failure that looks like "the phone just hangs" and has
+  nothing to do with the pane. `valmiki/app.py` carries a note where the middleware is built.
 - **These routes are a remote shell.** The pane approves tool calls, and the tools write files and
-  run commands. Nothing under the prefix may ever reach `RouteOverrides.skip`, and the deploy story
-  has to say that out loud rather than leave it to a reader who is copying the blog block. A single
-  bearer token is right for a phone talking to your own machine; it is not right for a Hetzner box on
-  a public hostname, which is what `deploy.py` makes easy.
+  run commands. Nothing under the prefix may ever reach `RouteOverrides.skip`. On a tailnet that
+  is the whole of the exposure, and the bearer token is the second lock rather than the only one;
+  it stops being enough the moment the server answers on a public hostname.
 - **One user or many.** valmiki's auth is accounts. Ramabana standalone is one person and one token.
   Both have to work, which means the port carries an identity and `settings` is per-user, or the
   standalone app declares itself single-user at boot. Deciding this after the settings file exists
   costs a migration.
-- **82 routes in one 1159-line file.** The largest lego block's `app.py` is 110 lines. The port's six
-  members are the natural cut, and making it during the move is nearly free.
+- **82 routes in one 1159-line file.** No block here has an `app.py` past a hundred lines. The
+  port's six members are the natural cut, and making it during the move is nearly free.
 - **`models.py` probes mlx, llama and ollama on a background thread at boot.** Pointless on a
   phone-facing server. Opt-in, as the plan already says.
 
 ## Order
 
-1. valmiki: empty `__init__.py`, rename, seeds out of the wheel. Three commits, no dependants yet.
+1. ~~valmiki: empty `__init__.py`, rename, strip to core and auth.~~ Done.
 2. Leela: Phase 0 as reordered above. Leela works after every step.
 3. valmiki: `valmiki/agent/` from the moved files, against `AgentPort`.
 4. Leela: `blocks/agent` becomes a re-export seam, the pattern `blocks/runtime/kernels.py` already
    uses over kunda. `ai.py` does not move.
 5. valmiki: `LocalPort`, and `ramabana[web]` as the extra that pulls valmiki in.
-6. The phone: auth mode, the narrow layout, the manifest, and reconnecting a dropped stream from
+6. The phone: the narrow layout, the manifest, and reconnecting a dropped stream from
    `Feed.since(seq)`.
 
 Steps 4 and 5 are independent of each other. Step 6 needs 3 and nothing else.

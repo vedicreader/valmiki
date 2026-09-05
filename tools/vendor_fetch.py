@@ -24,7 +24,7 @@ FONTS = VENDOR / 'fonts'
 # name in static/vendor -> exact upstream URL
 PKGS = {
     # what fast_app puts in the head by default (fasthtml.core: htmxsrc, fhjsscr, surrsrc,
-    # scopesrc) plus the preload extension lego asks for by name
+    # scopesrc) plus the preload extension the head asks for by name
     'htmx.min.js':              'https://cdn.jsdelivr.net/npm/htmx.org@2.0.7/dist/htmx.min.js',
     'fasthtml.js':              'https://cdn.jsdelivr.net/gh/answerdotai/fasthtml-js@1.0.12/fasthtml.js',
     'surreal.js':               'https://cdn.jsdelivr.net/gh/answerdotai/surreal@1.3.2/surreal.js',
@@ -33,18 +33,7 @@ PKGS = {
     # the digest printed below is what says whether upstream has moved since.
     'css-scope-inline.js':      'https://cdn.jsdelivr.net/gh/gnat/css-scope-inline@main/script.js',
     'htmx-ext-preload.js':      'https://cdn.jsdelivr.net/npm/htmx-ext-preload@2.1.1/preload.js',
-    # the blog's code blocks
-    'highlight.min.js':         'https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/highlight.min.js',
-    'highlight-python.min.js':  'https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/languages/python.min.js',
-    # both, because the blog swaps the href when the page flips between light and dark
-    'highlight-dark.min.css':   'https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/styles/atom-one-dark.min.css',
-    'highlight-light.min.css':  'https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/styles/atom-one-light.min.css',
-    'highlightjs-copy.min.js':  'https://cdn.jsdelivr.net/gh/arronhunt/highlightjs-copy@v1.0.6/dist/highlightjs-copy.min.js',
-    'highlightjs-copy.min.css': 'https://cdn.jsdelivr.net/gh/arronhunt/highlightjs-copy@v1.0.6/dist/highlightjs-copy.min.css',
     'nosleep.min.js':           'https://cdnjs.cloudflare.com/ajax/libs/nosleep/0.12.0/NoSleep.min.js',
-    # the hora block: date/timezone maths and the ephemeris the planetary hours are built from
-    'luxon.min.js':             'https://cdn.jsdelivr.net/npm/luxon@3.5.0/build/global/luxon.min.js',
-    'astronomy.browser.min.js': 'https://cdn.jsdelivr.net/npm/astronomy-engine@2.1.19/astronomy.browser.min.js',
 }
 
 # A UA modern enough that Google serves woff2 rather than the ttf fallback, which is
@@ -53,10 +42,6 @@ UA = ('Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) '
       'Chrome/126.0.0.0 Safari/537.36')
 FAMILIES = ['Libre+Baskerville', 'Fira+Code', 'Playfair+Display']
 WEIGHTS = '300;400;500;600;700'
-# The hora block is a standalone document — it does not carry the core head — and Inter is
-# the only face it wants, so it gets its own sheet rather than the 20KB one every other
-# page links.
-HORA_FAMILIES = ['Inter']
 
 def get(url, ua=False):
     req = Request(url, headers={'User-Agent': UA} if ua else {})
@@ -91,5 +76,4 @@ def fetch_fonts(families=None, out='fonts.css'):
 if __name__ == '__main__':
     print('packages:'); fetch_pkgs()
     print('fonts:');    fetch_fonts()
-    fetch_fonts(HORA_FAMILIES, out='inter.css')
     print('\nvendored into', VENDOR.resolve())

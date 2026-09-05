@@ -1,3 +1,2 @@
-import lego
-if __name__ == "__main__": lego.launch()
-
+from valmiki.app import launch
+if __name__ == "__main__": launch()
