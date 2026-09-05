@@ -55,7 +55,24 @@ for _d in ('vendor', 'assets'):
         app.router.routes.insert(0, Mount(f'/static/{_d}', app=StaticImmutable(directory=f'static/{_d}'),
                                           name=f'static_{_d}'))
 
-def index(req, auth): return landing(placeholder(f'{cfg.app_nm} is running. No block owns / yet.'), usr=auth)
+def _intro():
+    lgn = Button('Sign in', hx_get=f'{a.Routes.auth_modal}?step={a.Step.login}', hx_target='body', hx_swap='beforeend',
+                 cls=[ButtonT.primary, TextT.sm])
+    return Div(P('An agent you can talk to from a phone, built as blocks.', cls='mb-2'),
+               P('The agent block is not here yet. What is: the theme, the chrome, and a way in.',
+                 cls=f'{TextT.sm} {TextT.muted} mb-4'),
+               Div(lgn, cls='flex justify-center'), cls='max-w-xs mx-auto')
+
+def _home(auth):
+    rows = [('API token', 'Mint one for an API client or the mobile app.', a.Routes.tkn),
+            ('Sign out', 'End this session.', a.Routes.logout)]
+    return Div(H2(f'Hello, {auth["display_name"]}', cls='m-0'),
+               P('The agent block mounts here when it lands. Until then:', cls=f'{TextT.sm} {TextT.muted}'),
+               *[Div(A(t, href=h, cls='link-btn'), P(d, cls=f'{TextT.sm} {TextT.muted} m-0'), cls='mt-3')
+                 for t, d, h in rows],
+               cls=f'{PresetsT.shine} max-w-sm mx-auto mt-8 p-4')
+
+def index(req, auth): return base(_home(auth), auth, title=cfg.app_nm) if auth else landing(_intro())
 
 app.get('/')(index)
 app.get('/health')(lambda req: JSONResponse({'status': 'ok'}))

@@ -60,3 +60,17 @@ def test_bearer_still_authenticates_when_google_oauth_is_wired(usr, monkeypatch)
     c = TestClient(app, follow_redirects=False)
     assert c.get('/a/tkn', headers=hdr(d.mk_api_tkn(usr.id))).status_code == 200
     assert c.get('/a/tkn').status_code in (302, 303)
+
+def test_the_home_page_renders_signed_out_and_signed_in(client, usr):
+    from valmiki.auth.data import mk_api_tkn
+    out = client.get('/')
+    assert out.status_code == 200 and 'Sign in' in out.text
+    inn = client.get('/', headers=hdr(mk_api_tkn(usr.id)))
+    assert inn.status_code == 200 and usr.display_name in inn.text and 'API token' in inn.text
+
+def test_the_token_card_replaces_itself_rather_than_nesting(client, usr):
+    "htmx defaults to innerHTML, which would put a second #tkn-card inside the first."
+    from valmiki.auth.data import mk_api_tkn
+    r = client.post('/a/tkn', headers=hdr(mk_api_tkn(usr.id)))
+    assert r.status_code == 200 and r.text.count('id="tkn-card"') == 1
+    assert r.text.count('hx-target="#tkn-card"') == r.text.count('hx-swap="outerHTML"') > 0

@@ -2,7 +2,7 @@ from fastcore.xml import A, Div, P, Span, Br, Input, H3
 from fasthtml.components import Form, Button, H4
 from fasthtml.xtend import Script
 from .cfg import Routes, AppErr, Step, EmailNotVerified
-from valmiki.core import typewriter, modal, LabelInput, lc_icon, TextT, ButtonT, PresetsT
+from valmiki.core import modal, LabelInput, lc_icon, TextT, ButtonT, PresetsT
 from valmiki.core.cfg import cfg as s, RouteOverrides
 
 FORM_CLS = 'vstack align-left'
@@ -144,8 +144,11 @@ def verify_error_form(email, err, *args):
                 _back_to_login('Go Home?', home=True), cls=FORM_CLS)
 
 def amodal(content, title=s.app_sh):
+    # a static tagline, not the landing's typewriter: the modal is appended to a page that
+    # already has one, and two #typewriter elements leave this one an empty blinking caret
     ftr = P(s.ftr_txt, cls='text-xs mt-4')
-    return modal(H3(title), typewriter(), content, ftr, id='auth-modal', dialog_cls='auth-dialog')
+    return modal(H3(title), P(s.typwrtr_stat_txt.strip(), cls=f'{TextT.sm} {TextT.muted}'),
+                 content, ftr, id='auth-modal', dialog_cls='auth-dialog')
 
 def resend_verify_form(email, err, *args):
     return _form(Routes.resend_verification, (
@@ -177,15 +180,16 @@ def form(step=Step.login,email='',name='',token='',g_redirect=None,git_redirect=
 
 def token_card(tok=None, live=False):
     "Mint, show once, and revoke the bearer token an API client or the mobile app carries."
-    shown = Div(P('Copy it now. It is stored hashed nowhere and shown once.', cls=f'{TextT.sm} {TextT.muted}'),
+    shown = Div(P('Copy it now. This page will not show it again.', cls=f'{TextT.sm} {TextT.muted}'),
                 Input(value=tok, readonly=True, cls='w-full font-mono', onclick='this.select()'),
                 cls='space-y-2 mt-2') if tok else None
     state = None if tok else P('One token is active.' if live else 'No token yet.', cls=f'{TextT.sm} {TextT.muted}')
-    rm = Button('Revoke', hx_post=Routes.tkn_rm, hx_target='#tkn-card', cls=[ButtonT.danger, ButtonT.sm])
+    rm = Button('Revoke', hx_post=Routes.tkn_rm, hx_target='#tkn-card', hx_swap='outerHTML',
+                cls=[ButtonT.default, ButtonT.sm, 'text-danger'])
     btns = Div(Button('Mint a token' if not (tok or live) else 'Replace it', hx_post=Routes.tkn,
-                      hx_target='#tkn-card', cls=[ButtonT.primary, ButtonT.sm]),
+                      hx_target='#tkn-card', hx_swap='outerHTML', cls=[ButtonT.primary, ButtonT.sm]),
                rm if (tok or live) else None, cls='flex gap-2 mt-4')
     return Div(H3('API token', cls='m-0'),
                P('Send it as ', Span('Authorization: Bearer <token>', cls=TextT.mono), '. Minting replaces the old one.',
                  cls=TextT.sm),
-               state, shown, btns, id='tkn-card', cls=f'{PresetsT.shine} max-w-md mx-auto mt-8 p-4')
+               state, shown, btns, id='tkn-card', cls=f'{PresetsT.shine} max-w-2xl mx-auto mt-8 p-4')

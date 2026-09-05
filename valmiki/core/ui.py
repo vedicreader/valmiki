@@ -144,9 +144,10 @@ _GH_SVG = '<svg height="16" width="16" viewBox="0 0 16 16" fill="currentColor" a
 
 @timed_cache(seconds=3600)
 def _fetch_stars(repo):
+    "The star count, or None where the repo is private or unreachable. A bare 0 says nothing."
     try: n = urlread(f'https://api.github.com/repos/{repo}', return_json=True, timeout=3).get('stargazers_count', 0)
-    except: n=0
-    return f'{n / 1000:.1f}k' if n >= 1000 else str(n)
+    except: return
+    return (f'{n / 1000:.1f}k' if n >= 1000 else str(n)) if n else None
 
 def _stars(repo=None):
     repo = ifnone(repo, s.github_repo)
